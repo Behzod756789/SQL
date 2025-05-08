@@ -6,9 +6,12 @@ Insert Into Employees(EmpID, Name, Salary) Values(1, 'Alice', 5000.00)
 Insert Into Employees Values(2, 'Bob', 6000.00)
 Insert Into Employees(EmpID, Name, Salary) Values(3, 'Kamron',$400), (4, 'Murod', $600)
 
-Update Employees Set Salary = 7000 Where EmpID = 1
+Update Employees
+Set Salary = 7000 
+Where EmpID = 1
 
-Delete From Employees Where EmpID = 2
+Delete From Employees 
+Where EmpID = 2
 
 Alter Table Employees Alter Column Name Varchar(100)
 Alter Table Employees Add Department Varchar(50)
@@ -58,9 +61,9 @@ Exec sp_rename 'Products.Category', 'ProductCategory', 'Column';
 
 Insert Into Products(ProductID, ProductName, ProductCategory, Price, Description, StockQuantity) 
 Values
-(1, 'Noutbuk', 'Electronics', 1200.00, '15-dyuymli ekranga ega', 50),
-(2, 'Naushnik', 'Audio', 150.00, 'Shovqinni bekor qiluvchi', 50),
-(3, 'Daftarchalar', 'konstavar', 5.50, '200 varaq', 50),
+(1, 'Noutbuk', 'Electronics', $1200, '15-dyuymli ekranga ega', 50),
+(2, 'Naushnik', 'Audio', $150, 'Shovqinni bekor qiluvchi', 50),
+(3, 'Daftarl', 'konstavar', $2, '96 varaq', 50),
 -
 Select * Into Products_Backup From Products;
 
