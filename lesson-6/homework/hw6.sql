@@ -11,11 +11,10 @@ CREATE TABLE InputTbl (
 ('m', 'n'),
 ('n', 'm');
 
-SELECT DISTINCT
-  CASE WHEN col1 < col2 THEN col1 ELSE col2 END AS col1,
-  CASE WHEN col1 < col2 THEN col2 ELSE col1 END AS col2
+SELECT DISTINCT col1, col2
 FROM InputTbl
-ORDER BY col1 ASC, col2 ASC;
+WHERE col1 < col2
+ORDER BY col1, col2;
 
 
 CREATE TABLE TestMultipleZero (
@@ -35,9 +34,14 @@ VALUES
     (1,1,1,0);
 
 
-    select 
-     WHERE  NOT (A=0 AND B=0 and C=0) 
-    from TestMultipleZero
+   
+   SELECT * from TestMultipleZero
+WHERE A <> 0 or B <> 0 or C <> 0 or D <> 0;
+
+
+   SELECT * from TestMultipleZero
+WHERE not(A = 0 AND B = 0 and C = 0 and D = 0)
+
 
 create table section1(id int, name varchar(20))
 DROP TABLE section1
