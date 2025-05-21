@@ -419,17 +419,22 @@ GROUP BY
 
 
 SELECT 
-    ProductName,
-    (
-        SELECT COUNT(*) 
-        FROM Sales 
-        WHERE Sales.ProductID = Products.ProductID
-    ) AS TimesSold
+    p.ProductName,
+    COUNT(s.SaleID) AS TimesSold
 FROM 
-    Products;
+    Products p
+LEFT JOIN 
+    Sales s ON p.ProductID = s.ProductID
+GROUP BY 
+    p.ProductName;
 
 
-
+SELECT City, Year, Population
+FROM 
+    (SELECT City, Year_2020, Year_2021, Year_2022
+     FROM Population_Each_Year) AS SourceTable
+UNPIVOT
+    (Population FOR Year IN (Year_2020 AS '2020', Year_2021 AS '2021', Year_2022 AS '2022')) AS UnpivotedTable;
 
 
 
