@@ -415,8 +415,7 @@ FROM
     Invoices
 GROUP BY 
     CustomerID
-ORDER BY 
-    TotalSpent DESC;
+
 
 
 SELECT 
