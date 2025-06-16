@@ -79,6 +79,4 @@ FROM (
 
 
 
-SELECT g.Product, 1 AS Quantity
-FROM Grouped g
-JOIN master..spt_values n ON n.type = 'P' AND n.number < g.Quantity;
+
