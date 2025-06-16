@@ -1,15 +1,15 @@
 SELECT 
   r.Region,
   d.Distributor,
-  ISNULL(rs.Sales, 0) AS Sales
+  ISNULL((
+    SELECT Sales 
+    FROM #RegionSales rs 
+    WHERE rs.Region = r.Region AND rs.Distributor = d.Distributor
+  ), 0) AS Sales
 FROM 
-  (SELECT DISTINCT Region FROM #RegionSales) r
-JOIN 
-  (SELECT DISTINCT Distributor FROM #RegionSales) d ON 1 = 1
-LEFT JOIN 
-  #RegionSales rs ON rs.Region = r.Region AND rs.Distributor = d.Distributor
-ORDER BY 
-  d.Distributor, r.Region;
+  (SELECT DISTINCT Region FROM #RegionSales) r,
+  (SELECT DISTINCT Distributor FROM #RegionSales) d
+ORDER BY d.Distributor, r.Region;
 
 
 SELECT name
@@ -22,118 +22,108 @@ WHERE (
 
 
 
-SELECT 
-  p.product_name,
-  SUM(o.unit) AS unit
+SELECT product_name,
+       (SELECT SUM(unit)
+        FROM Orders o
+        WHERE o.product_id = p.product_id 
+          AND order_date >= '2020-02-01' 
+          AND order_date < '2020-03-01') AS unit
 FROM Products p
-JOIN Orders o ON p.product_id = o.product_id
-WHERE o.order_date >= '2020-02-01' AND o.order_date < '2020-03-01'
-GROUP BY p.product_name
-HAVING SUM(o.unit) >= 100;
+WHERE (
+  SELECT SUM(unit)
+  FROM Orders o
+  WHERE o.product_id = p.product_id 
+    AND order_date >= '2020-02-01' 
+    AND order_date < '2020-03-01'
+) >= 100;
 
 
 SELECT CustomerID, Vendor
-FROM (
-  SELECT 
-    CustomerID, 
-    Vendor, 
-    COUNT(*) AS OrderCount,
-    RANK() OVER (PARTITION BY CustomerID ORDER BY COUNT(*) DESC) AS rnk
+FROM Orders o
+WHERE Vendor = (
+  SELECT TOP 1 Vendor
   FROM Orders
-  GROUP BY CustomerID, Vendor
-) t
-WHERE rnk = 1;
+  WHERE CustomerID = o.CustomerID
+  GROUP BY Vendor
+  ORDER BY SUM([Count]) DESC
+)
+GROUP BY CustomerID, Vendor;
 
 
 
 DECLARE @Check_Prime INT = 91;
-DECLARE @i INT = 2;
-DECLARE @isPrime BIT = 1;
 
-WHILE @i <= SQRT(@Check_Prime)
-BEGIN
-  IF @Check_Prime % @i = 0
-  BEGIN
-    SET @isPrime = 0;
-    BREAK;
-  END
-  SET @i += 1;
-END
-
-IF @isPrime = 1
-  PRINT 'This number is prime';
-ELSE
+IF @Check_Prime < 2
   PRINT 'This number is not prime';
-
-
-WITH SignalCounts AS (
-  SELECT Device_id, Locations, COUNT(*) AS SignalCount
-  FROM Device
-  GROUP BY Device_id, Locations
-),
-MaxSignalLocation AS (
-  SELECT sc1.Device_id, sc1.Locations
-  FROM SignalCounts sc1
-  LEFT JOIN SignalCounts sc2
-    ON sc1.Device_id = sc2.Device_id
-   AND sc1.SignalCount < sc2.SignalCount
-  WHERE sc2.Device_id IS NULL
+ELSE IF EXISTS (
+  SELECT 1
+  FROM master..spt_values
+  WHERE type = 'P' AND number BETWEEN 2 AND SQRT(@Check_Prime)
+    AND @Check_Prime % number = 0
 )
+  PRINT 'This number is not prime';
+ELSE
+  PRINT 'This number is prime';
+
+
+
+
+
 SELECT 
   d.Device_id,
-  COUNT(DISTINCT d.Locations) AS no_of_location,
-  m.Locations AS max_signal_location,
-  COUNT(*) AS no_of_signals
+  (SELECT COUNT(DISTINCT Locations) 
+   FROM Device d2 
+   WHERE d2.Device_id = d.Device_id) AS no_of_location,
+  (SELECT TOP 1 Locations 
+   FROM Device d3 
+   WHERE d3.Device_id = d.Device_id 
+   GROUP BY Locations 
+   ORDER BY COUNT(*) DESC) AS max_signal_location,
+  (SELECT COUNT(*) 
+   FROM Device d4 
+   WHERE d4.Device_id = d.Device_id) AS no_of_signals
 FROM Device d
-JOIN MaxSignalLocation m
-  ON d.Device_id = m.Device_id
-GROUP BY d.Device_id, m.Locations;
+GROUP BY d.Device_id;
 
 
 
-SELECT e.EmpID, e.EmpName, e.Salary
+
+SELECT EmpID, EmpName, Salary
 FROM Employee e
+WHERE Salary > (
+  SELECT AVG(Salary) 
+  FROM Employee 
+  WHERE DeptID = e.DeptID
+);
+
+
+
+SELECT SUM(
+  CASE 
+    WHEN match_count = 3 THEN 100
+    WHEN match_count > 0 THEN 10
+    ELSE 0
+  END
+) AS TotalWinnings
+FROM (
+  SELECT TicketID,
+         (SELECT COUNT(*) 
+          FROM WinningNumbers wn 
+          WHERE wn.Number IN (
+              SELECT Number 
+              FROM Tickets t2 
+              WHERE t2.TicketID = t.TicketID
+          )
+         ) AS match_count
+  FROM (SELECT DISTINCT TicketID FROM Tickets) t
+) x;
+
+
+
+SELECT g.Product, 1 AS Quantity
+FROM Grouped g
 JOIN (
-  SELECT DeptID, AVG(Salary) AS AvgSal
-  FROM Employee
-  GROUP BY DeptID
-) d ON e.DeptID = d.DeptID
-WHERE e.Salary > d.AvgSal;
-
-
-
-WITH Winning AS (SELECT Number FROM WinningNumbers),
-Matches AS (
-  SELECT TicketID, COUNT(*) AS matched
-  FROM Tickets
-  WHERE Number IN (SELECT Number FROM Winning)
-  GROUP BY TicketID
-),
-Winnings AS (
-  SELECT 
-    CASE 
-      WHEN matched = 3 THEN 100
-      WHEN matched > 0 THEN 10
-      ELSE 0 
-    END AS Prize
-  FROM Matches
-)
-SELECT SUM(Prize) AS TotalWinnings FROM Winnings;
-
-
-
-
-
-WITH Numbers AS (
-  SELECT 1 AS n
-  UNION ALL
-  SELECT n + 1 FROM Numbers WHERE n < 100
-),
-Expanded AS (
-  SELECT g.Product
-  FROM Grouped g
-  JOIN Numbers n ON n.n <= g.Quantity
-)
-SELECT Product, 1 AS Quantity
-FROM Expanded
-ORDER BY Product;
+  SELECT number
+  FROM master..spt_values
+  WHERE type = 'P'
+) n ON n.number < g.Quantity;
