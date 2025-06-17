@@ -28,17 +28,21 @@ WHERE (SELECT SUM(unit)
 
 
 
-with cte as(
-select *, 
-(Select count(locations) from device as dev where dev.Device_id=device.Device_id and dev.Locations=device.Locations) as cnt_loc
-from Device
+WITH cte AS (
+  SELECT 
+    CustomerID, 
+    Vendor, 
+    SUM([Count]) AS TotalCount
+  FROM Orders
+  GROUP BY CustomerID, Vendor
 )
-select distinct cte.Device_id,cte.Locations, aggregated.cnt_locs,aggregated.cnt_distc_loc from cte
-
-JOIN (select Device_id, count(Locations) as cnt_locs, count(distinct locations) as cnt_distc_loc  from Device group by Device_id) as aggregated
-on cte.Device_id=aggregated.Device_id
-
-where cnt_loc=(select max(cnt_loc) from cte as cte1 where cte.Device_id=cte1.Device_id)
+SELECT CustomerID, Vendor
+FROM cte
+WHERE TotalCount = (
+  SELECT MAX(TotalCount)
+  FROM cte AS inner_cte
+  WHERE inner_cte.CustomerID = cte.CustomerID
+);
 
 
 
@@ -76,13 +80,7 @@ WHERE Salary > (SELECT AVG(Salary) FROM Employee WHERE DeptID = e.DeptID);
 
 
 
-SELECT EmpID, EmpName, Salary
-FROM Employee e
-WHERE Salary > (
-  SELECT AVG(Salary)
-  FROM Employee
-  WHERE DeptID = e.DeptID
-);
+
 
 
 
@@ -99,49 +97,40 @@ select sum(case when Winning_num_cnt=0 then 0
 
 
 
-
-WITH Platforms AS (
-  SELECT User_id, Spend_date,
-    MAX(CASE WHEN Platform = 'Mobile' THEN 1 ELSE 0 END) AS Mobile,
-    MAX(CASE WHEN Platform = 'Desktop' THEN 1 ELSE 0 END) AS Desktop,
-    SUM(Amount) AS TotalAmount
+WITH cte AS (
+  SELECT 
+    User_id,
+    Spend_date,
+    CASE 
+      WHEN COUNT(DISTINCT Platform) = 2 THEN 'Both'
+      ELSE MAX(Platform)
+    END AS Platform,
+    SUM(Amount) AS Total_Amount
   FROM Spending
   GROUP BY User_id, Spend_date
 )
-SELECT Spend_date, 'Mobile' AS Platform,
-       SUM(CASE WHEN Mobile = 1 AND Desktop = 0 THEN TotalAmount ELSE 0 END) AS Total_Amount,
-       COUNT(DISTINCT CASE WHEN Mobile = 1 AND Desktop = 0 THEN User_id END) AS Total_users
-FROM Platforms
-GROUP BY Spend_date
-UNION
-SELECT Spend_date, 'Desktop',
-       SUM(CASE WHEN Desktop = 1 AND Mobile = 0 THEN TotalAmount ELSE 0 END),
-       COUNT(DISTINCT CASE WHEN Desktop = 1 AND Mobile = 0 THEN User_id END)
-FROM Platforms
-GROUP BY Spend_date
-UNION
-SELECT Spend_date, 'Both',
-       SUM(CASE WHEN Desktop = 1 AND Mobile = 1 THEN TotalAmount ELSE 0 END),
-       COUNT(DISTINCT CASE WHEN Desktop = 1 AND Mobile = 1 THEN User_id END)
-FROM Platforms
-GROUP BY Spend_date
+SELECT 
+  Spend_date,
+  Platform,
+  SUM(Total_Amount) AS Total_Amount,
+  COUNT(User_id) AS Total_Users
+FROM cte
+GROUP BY Spend_date, Platform
 ORDER BY Spend_date, Platform;
 
 
-
-
-WITH RECURSIVE Unrolled(Product, Quantity) AS (
-  SELECT Product, 1
+WITH cte AS (
+  SELECT Product, 1 AS Quantity
   FROM Grouped
   WHERE Quantity > 0
   UNION ALL
-  SELECT Product, Quantity + 1
-  FROM Unrolled
-  JOIN Grouped g ON g.Product = Unrolled.Product
-  WHERE Quantity + 1 <= g.Quantity
+  SELECT cte.Product, cte.Quantity + 1
+  FROM cte
+  JOIN Grouped g ON cte.Product = g.Product
+  WHERE cte.Quantity + 1 <= g.Quantity
 )
 SELECT Product, 1 AS Quantity
-FROM Unrolled
+FROM cte
 ORDER BY Product;
 
 
