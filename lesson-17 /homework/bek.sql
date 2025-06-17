@@ -1,9 +1,16 @@
-SELECT r.Region, d.Distributor,
-  ISNULL((SELECT Sales 
-          FROM #RegionSales 
-          WHERE Region = r.Region AND Distributor = d.Distributor), 0) AS Sales
-FROM (SELECT DISTINCT Region FROM #RegionSales) r,
-     (SELECT DISTINCT Distributor FROM #RegionSales) d;
+SELECT 
+    r.Region,
+    d.Distributor,
+    ISNULL(rs.Sales, 0) AS Sales
+FROM 
+    (SELECT DISTINCT Region FROM RegionSales) r
+CROSS JOIN 
+    (SELECT DISTINCT Distributor FROM RegionSales) d
+LEFT JOIN 
+    RegionSales rs 
+    ON rs.Region = r.Region AND rs.Distributor = d.Distributor
+ORDER BY 
+    d.Distributor, r.Region;
 
 
 SELECT name
