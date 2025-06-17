@@ -64,19 +64,15 @@ WHERE Salary > (SELECT AVG(Salary) FROM Employee WHERE DeptID = e.DeptID);
 
 
 
-SELECT SUM(CASE 
-           WHEN match = 3 THEN 100 
-           WHEN match > 0 THEN 10 
-           ELSE 0 
-         END) AS TotalWinnings
-FROM (
-  SELECT TicketID,
-         (SELECT COUNT(*) 
-          FROM WinningNumbers 
-          WHERE Number IN (SELECT Number FROM Tickets t2 WHERE t2.TicketID = t.TicketID)) AS match
-  FROM (SELECT DISTINCT TicketID FROM Tickets) t
-) x;
-
-
+with cte as(
+select TicketID, count(ValidNumbers.Number) as Winning_num_cnt from Tickets
+LEFT JOIN
+ ValidNumbers
+on Tickets.Number=ValidNumbers.Number
+group by TicketID
+)
+select sum(case when Winning_num_cnt=0 then 0
+        when Winning_num_cnt=3 then 100
+        else 10 end) as Total_winning from cte
 
 
