@@ -160,28 +160,19 @@ GROUP BY c.customer_id, c.name;
 
 
 SELECT 
-    RowNumber,
-    FIRST_VALUE(TestCase) OVER (
-        ORDER BY RowNumber
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS Workflow
-FROM (
-    SELECT 
-        RowNumber, 
-        TestCase,
-        MAX(CASE WHEN TestCase IS NOT NULL THEN RowNumber END) 
-            OVER (ORDER BY RowNumber ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS grp
-    FROM Gaps
-) g
-JOIN (
-    SELECT 
-        RowNumber AS grp,
-        TestCase
-    FROM Gaps
-    WHERE TestCase IS NOT NULL
-) base ON g.grp = base.grp;
-
-
+    g1.RowNumber,
+    CASE 
+        WHEN g1.TestCase IS NOT NULL THEN g1.TestCase
+        ELSE (
+            SELECT TOP 1 g2.TestCase
+            FROM Gaps g2
+            WHERE g2.RowNumber < g1.RowNumber
+              AND g2.TestCase IS NOT NULL
+            ORDER BY g2.RowNumber DESC
+        )
+    END AS Workflow
+FROM Gaps g1
+ORDER BY g1.RowNumber;
 
 
 
